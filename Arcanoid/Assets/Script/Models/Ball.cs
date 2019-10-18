@@ -1,12 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Helper;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Models
 {
     public class Ball
     {
-        private Vector3 direction;
-        private Vector3[] rayDirections =
+        private Vector2 direction;
+        private Vector2[] rayDirections =
         {
         new Vector3(0,1),
         new Vector3(1,0),
@@ -17,36 +19,56 @@ namespace Models
         new Vector3(-1,-1),
         new Vector3(-1,1),
     };
-        private List<Vector3> currentRayDirections;
+        private List<Vector2> currentRayDirections;
         private Transform ballPosition;
+        private GameObject ballView;
         private Ray ray;
+        private float speed = Constants.BALL_SPEED;
+        private float ballHalfSize;
+        public bool isBallLost { get; private set; }
+        private Vector2 newDirection = Vector2.zero;
+        private Action<Ball> onBallLose;
+        private Action<GameObject> onBallHitBrick;
 
-        private void Awake()
+        public Ball(GameObject ball, Action<Ball> onBallLose, Action<GameObject> onBallHitBrick)
         {
-            direction = new Vector3(0, -1); //RandomDirection();
-            currentRayDirections = new List<Vector3>();
-            //ballPosition = transform;
-            ray = new Ray();
+            ballView = ball;
+            this.onBallLose = onBallLose;
+            this.onBallHitBrick = onBallHitBrick;
+            ballPosition = ballView.transform;
+            currentRayDirections = new List<Vector2>();
+            ballHalfSize = ball.GetComponent<SpriteRenderer>().bounds.size.x / 2;
+        }
+
+        public void ActivateBall(Vector3 newBallPosition)
+        {
+            isBallLost = false;
+            ballPosition.position = newBallPosition;
+            ballView.SetActive(true);
+            direction = GetRandomDirection();
             CalculateRayDirections();
         }
 
-        private Vector3 GetRandomDirection()
+        private Vector2 GetRandomDirection()
         {
-            int x = 0, y = 0;
+            int x = 0;
 
-            while (x == 0 && y == 0)
+            while (x == 0)
             {
-                x = Random.Range(-1, 1);
-                y = Random.Range(-1, 1);
+                x = UnityEngine.Random.Range(-1, 1);
             }
 
-            return new Vector3(x, y);
+            return new Vector2(x, 1);
         }
 
-        void FixedUpdate()
+        public void OnModelUpdate(float time)
         {
-            BallMove();
-            DrawRays();
+            CheckBallPosition();
+            if (!isBallLost)
+            {
+                DrawRays();
+                BallMove(time);
+            }
         }
 
         private void CalculateRayDirections()
@@ -57,49 +79,62 @@ namespace Models
             {
                 if (Vector3.Dot(rayDirections[i], direction) > 0)
                 {
-                    currentRayDirections.Add(Vector3.ClampMagnitude(rayDirections[i], 0.375f));
+                    currentRayDirections.Add(Vector3.ClampMagnitude(rayDirections[i], ballHalfSize));
                 }
+            }
+        }
+
+        private void CheckBallPosition()
+        {
+            if (ballPosition.position.y <= Constants.BALL_LOST_POSITION)
+            {
+                isBallLost = true;
+                ballView.SetActive(false);
+                onBallLose?.Invoke(this);
             }
         }
 
         private void DrawRays()
         {
-            RaycastHit rayHit;
             for (int i = 0; i < currentRayDirections.Count; i++)
             {
                 Debug.DrawRay(ballPosition.position, currentRayDirections[i], Color.red);
 
                 ray.origin = ballPosition.position;
                 ray.direction = currentRayDirections[i];
+                var rayHit = Physics2D.Raycast(ballPosition.position, currentRayDirections[i], ballHalfSize);
 
-                if (Physics.Raycast(ray, out rayHit, 0.375f))
+                if (rayHit.collider != null)
                 {
                     var collisionObject = rayHit.collider.gameObject;
-                    Vector3 newDirection = new Vector3();
-                    if (collisionObject.GetComponent<Paddle>() != null)
+                    if (collisionObject.tag == "Paddle")
                     {
                         var center = collisionObject.transform.position.x;
                         var distance = rayHit.point.x - center;
-                        newDirection = new Vector3(distance,  1);
+                        newDirection = new Vector2(distance,  1);
                     }
                     else
                     {
-                        newDirection = Vector3.Reflect(direction, rayHit.normal);
-                        var randomRange = Random.Range(-0.25f, 0.25f);
+                        newDirection = Vector2.Reflect(direction, rayHit.normal);
+                        var randomRange = UnityEngine.Random.Range(-0.25f, 0.25f);
                         newDirection.x += randomRange;
                         newDirection.y += randomRange;
+                        if (collisionObject.tag == "Brick")
+                        {
+                            onBallHitBrick?.Invoke(collisionObject);
+                        }
                     }
-                    direction = Vector3.ClampMagnitude(newDirection, 1f);
+                    direction = Vector2.ClampMagnitude(newDirection, 1f);
                     CalculateRayDirections();
                     return;
                 }
             }
         }
 
-        private void BallMove()
+        private void BallMove(float time)
         {
             Debug.DrawRay(ballPosition.position, direction.normalized, Color.green, 5f);
-            //transform.Translate(direction.normalized * (15f * Time.deltaTime), Space.World);
+            ballPosition.Translate(direction.normalized * (speed * time), Space.World);
         }
     }
 }

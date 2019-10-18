@@ -1,7 +1,8 @@
 ﻿using Controllers;
+using Helper;
 using UnityEngine;
 
-namespace Core
+namespace BaseScripts
 {
     public class Core : MonoBehaviour
     {
@@ -9,19 +10,29 @@ namespace Core
         [SerializeField] private GameObject ball;
         [SerializeField] private GameObject brick;
         [SerializeField] private GameObject bonus;
-        [SerializeField] private Camera camera;
+        [SerializeField] private Camera mainCamera;
+        [SerializeField] private CoreUI coreUI;
         [SerializeField] private Sprite[] bonusSprites;
 
+
         public static Core GetCore { get; private set; }
+        public static CoreUI GetCoreUI { get; private set; }
 
         private PaddleController paddleController;
         private GameController gameController;
+        private BallController ballController;
+        private BonusController bonusController;
 
         private void Awake()
         {
             GetCore = this;
+            GetCoreUI = coreUI;
+
             gameController = new GameController(transform.position, paddle, brick, ball);
-            paddleController = new PaddleController(gameController.paddle, camera);
+            bonusController = new BonusController();
+            coreUI.Init(gameController, bonusController);
+            paddleController = new PaddleController(gameController.paddle, mainCamera);
+            ballController = new BallController(gameController);
         }
 
         private void Update()
@@ -31,7 +42,11 @@ namespace Core
 
         private void LateUpdate()
         {
-            paddleController.ControllerLateUpdate(Time.deltaTime);
+            if (!Locker.Lock)
+            {
+                paddleController.ControllerLateUpdate(Time.fixedDeltaTime);
+                ballController.ControllerLateUpdate(Time.deltaTime);
+            }
         }
     }
 }

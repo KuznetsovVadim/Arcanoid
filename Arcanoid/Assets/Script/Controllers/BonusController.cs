@@ -1,18 +1,16 @@
-﻿using System.Collections;
+﻿using BaseScripts;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class BonusController : MonoBehaviour
+namespace Controllers 
 {
-    // Start is called before the first frame update
-    void Start()
+    public class BonusController: BaseController
     {
-        
-    }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        public BonusController()
+        {
+
+        }
     }
 }

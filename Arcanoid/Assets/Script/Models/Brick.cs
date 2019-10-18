@@ -23,12 +23,12 @@ namespace Models
             this.brickIsBroken = brickIsBroken;
             brickColors = new Dictionary<int, Color>()
             {
-                {1, Color.gray },
-                {2, Color.green },
-                {3, Color.yellow },
-                {4, Color.red },
+                {0, Color.gray },
+                {1, Color.green },
+                {2, Color.yellow },
+                {3, Color.red },
             };
-            brickStrength = 1;
+            brickStrength = 0;
             brickMaterial = brick.GetComponent<SpriteRenderer>().material;
             brickMaterial.color = brickColors[brickStrength];
         }
@@ -38,13 +38,17 @@ namespace Models
             switch (strength)
             {
                 case BrickStrength.OneHit:
-                    brickStrength = 1;
+                    brickStrength = 0;
                     break;
-                case BrickStrength.Random:
-                    brickStrength = UnityEngine.Random.Range(1, 5);
+                default:
+                    brickStrength = UnityEngine.Random.Range(0, 4);
                     break;
             }
-            brickMaterial.color = brickColors[brickStrength];
+            
+            if(brickColors.ContainsKey(brickStrength))
+            {
+                brickMaterial.color = brickColors[brickStrength];
+            }
         }
 
         public void GetDamage()
