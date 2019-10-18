@@ -16,7 +16,7 @@ GameObject:
   m_TagString: Brick
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 4294967295
   m_IsActive: 1
 --- !u!4 &3317262713279172673
 Transform:
@@ -97,7 +97,7 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 4.46, y: 0.85}
+    oldSize: {x: 4.533333, y: 0.85}
     newSize: {x: 4.46, y: 0.85}
     adaptiveTilingThreshold: 0.5
     drawMode: 0

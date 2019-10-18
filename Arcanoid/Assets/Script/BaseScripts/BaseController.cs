@@ -28,7 +28,7 @@
             IsActive = !IsActive;
         }
 
-        public virtual void ControllerUpdate() { }
+        public virtual void ControllerUpdate(float time) { }
 
         public virtual void ControllerLateUpdate(float time) { }
     }

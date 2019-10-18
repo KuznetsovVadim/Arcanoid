@@ -13,12 +13,14 @@ namespace Models
         private Dictionary<int, Color> brickColors;
         private Material brickMaterial;
 
-        private Action brickIsBroken;
+        private Action<Brick> brickIsBroken;
+        public Transform brickPosition { get; private set; }
 
         public bool hasBonus;
 
-        public Brick(GameObject brick, Action brickIsBroken)
+        public Brick(GameObject brick, Action<Brick> brickIsBroken)
         {
+            brickPosition = brick.transform;
             brickObject = brick;
             this.brickIsBroken = brickIsBroken;
             brickColors = new Dictionary<int, Color>()
@@ -54,18 +56,15 @@ namespace Models
         public void GetDamage()
         {
             brickStrength--;
-            if(brickStrength >= 1)
+            if(brickStrength >= 0)
             {
                 brickMaterial.color = brickColors[brickStrength];
             }
             else
             {
                 brickObject.SetActive(false);
-                brickIsBroken?.Invoke();
-                if (hasBonus)
-                {
-                    //
-                }
+
+                brickIsBroken?.Invoke(this);
             }
         }
     }

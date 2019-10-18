@@ -23,13 +23,21 @@ namespace Controllers
         private int brickMatrixColumn = 3;
         private int brickCount;
         private int currentLevel;
-        private int maxBonusCount = 4;
+        private int maxBonusCount = Constants.BONUS_COUNT_PER_LEVEL;
 
         private Dictionary<GameObject, Brick> BrickMatrix;
         private Brick[] allModel;
 
         public List<Ball> ballInGame { get; private set; }
         private Queue<Ball> ballPool;
+
+        private BonusController bonusController;
+        private PaddleController paddleController;
+        private BallController ballController;
+
+        private int bonusLevel = 3;
+
+        public bool isNeedControllers { get; private set; }
 
         public GameController(Vector3 firstBrickPosition, GameObject paddle, GameObject brick, GameObject ball)
         {
@@ -49,6 +57,8 @@ namespace Controllers
 
             paddleStartPosition = new Vector2(0, Constants.PADDLE_Y_POSITION);
             currentLevel = Constants.START_LEVEL;
+
+            isNeedControllers = true;
 
             CreateBricks();
             CreatePaddle();
@@ -70,6 +80,7 @@ namespace Controllers
                 for (int j = 0; j < brickMatrixRow; j++)
                 {
                     tempBrick = GameObject.Instantiate(brickPrefab, position, rotation);
+                    tempBrick.name = Constants.BRICK_NAME;
                     var brickModel = new Brick(tempBrick, DecreaseBrickCount);
                     allModel[brickIndex] = brickModel;
                     BrickMatrix.Add(tempBrick, brickModel);
@@ -85,6 +96,7 @@ namespace Controllers
         {
             Quaternion rotation = new Quaternion();
             paddle = GameObject.Instantiate(paddle, paddleStartPosition, rotation);
+            paddle.name = Constants.PADDLE_NAME;
         }
 
         private void CreateBall()
@@ -119,6 +131,7 @@ namespace Controllers
                 {
                     for (int i = 1; i < ballInGame.Count; i++)
                     {
+                        ballInGame[i].InActiveObject();
                         ballPool.Enqueue(ballInGame[i]);
                     }
                     ballInGame.Clear();
@@ -127,6 +140,27 @@ namespace Controllers
                 
                 var position = new Vector3(paddle.transform.position.x, Constants.BALL_Y_POSITION, 1);
                 ball.ActivateBall(position);
+            }
+        }
+
+        private void ResetBallSpeed()
+        {
+            ballController.ResetBallSpeed();
+        }
+
+        private void ResetPaddleSize()
+        {
+            if(paddleController != null)
+            {
+                paddleController.paddleModel.ResetPaddleSize();
+            }
+        }
+
+        private void ResetBonuses()
+        {
+            if(bonusController != null)
+            {
+                bonusController.ResetBunuses();
             }
         }
 
@@ -157,6 +191,7 @@ namespace Controllers
                 var position = new Vector2(paddle.transform.position.x, Constants.BALL_Y_POSITION);
                 ballInGame.Add(ball);
                 ball.ActivateBall(position);
+                ball.speed = ballController.BallSpeed;
             }
             else
             {
@@ -182,21 +217,30 @@ namespace Controllers
         public void ContinueLevel()
         {
             ResetPaddlePosition();
+            ResetPaddleSize();
             GetBallFromPool();
+            ResetBallSpeed();
+            ResetBonuses();
         }
 
         public void StartNewGame()
         {
             ResetGameModel();
             ResetPaddlePosition();
-            StartNewLevel(1);
+            StartNewLevel(currentLevel);
+            ResetPaddleSize();
             GetBallFromPool();
+            ResetBallSpeed();
+            ResetBonuses();
         }
 
         public void StartNextLevel()
         {
             ResetPaddlePosition();
+            ResetPaddleSize();
             ResetBallPosition();
+            ResetBallSpeed();
+            ResetBonuses();
         }
 
         public void LifeIsLost()
@@ -212,10 +256,14 @@ namespace Controllers
             }
         }
 
-        public void DecreaseBrickCount()
+        public void DecreaseBrickCount(Brick brick)
         {
             brickCount--;
-            gameModel.PlayerScore += 100;
+            gameModel.PlayerScore += Constants.SCORE_PER_BROKEN_BRICK;
+            if (brick.hasBonus && bonusController != null)
+            {
+                bonusController.CreateBonus(brick.brickPosition.position);
+            }
 
             if (brickCount == 0)
             {
@@ -227,6 +275,38 @@ namespace Controllers
             }
         }
 
+        public void GetAllControllers()
+        {
+            if (bonusController == null)
+            {
+                var bonus = Core.GetCore.GetController<BonusController>();
+                if (bonus != null)
+                {
+                    bonusController = bonus;
+                }
+            }
+
+            if (paddleController == null)
+            {
+                var paddle = Core.GetCore.GetController<PaddleController>();
+                if (paddle != null)
+                {
+                    paddleController = paddle;
+                }
+            }
+
+            if (ballController == null)
+            {
+                var ball = Core.GetCore.GetController<BallController>();
+                if (ball != null)
+                {
+                    ballController = ball;
+                }
+            }
+
+            isNeedControllers = false;
+        }
+
         public void StartNewLevel(int levelIndex)
         {
             brickCount = brickMatrixRow * brickMatrixColumn;
@@ -236,13 +316,12 @@ namespace Controllers
                 BrickMatrix[brick.Key].ResetBrickStrength((BrickStrength)levelIndex);
             }
 
-            if(levelIndex == 3)
+            if(levelIndex == bonusLevel)
             {
                 var currentBonus = maxBonusCount;
-                return;
                 while(currentBonus != 0)
                 {
-                    var rand = UnityEngine.Random.Range(0, brickCount + 1);
+                    var rand = UnityEngine.Random.Range(0, brickCount);
                     if (!allModel[rand].hasBonus)
                     {
                         currentBonus--;

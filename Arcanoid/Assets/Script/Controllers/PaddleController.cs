@@ -6,7 +6,7 @@ namespace Controllers
 {
     public class PaddleController : BaseController
     {
-        private Paddle paddleModel;
+        public Paddle paddleModel { get; private set; }
         private GameObject paddleView;
 
         public PaddleController(GameObject paddleView, Camera camera)

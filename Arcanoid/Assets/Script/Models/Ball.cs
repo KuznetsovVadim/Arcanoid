@@ -10,22 +10,21 @@ namespace Models
         private Vector2 direction;
         private Vector2[] rayDirections =
         {
-        new Vector3(0,1),
-        new Vector3(1,0),
-        new Vector3(0,-1),
-        new Vector3(-1,0),
-        new Vector3(1,1),
-        new Vector3(1,-1),
-        new Vector3(-1,-1),
-        new Vector3(-1,1),
-    };
+            new Vector3(0,1),
+            new Vector3(1,0),
+            new Vector3(0,-1),
+            new Vector3(-1,0),
+            new Vector3(1,1),
+            new Vector3(1,-1),
+            new Vector3(-1,-1),
+            new Vector3(-1,1),
+        };
         private List<Vector2> currentRayDirections;
         private Transform ballPosition;
         private GameObject ballView;
-        private Ray ray;
-        private float speed = Constants.BALL_SPEED;
+        public float speed = Constants.BALL_SPEED;
         private float ballHalfSize;
-        public bool isBallLost { get; private set; }
+        private bool isBallLost;
         private Vector2 newDirection = Vector2.zero;
         private Action<Ball> onBallLose;
         private Action<GameObject> onBallHitBrick;
@@ -94,20 +93,21 @@ namespace Models
             }
         }
 
+        public void InActiveObject()
+        {
+            ballView.SetActive(false);
+        }
+
         private void DrawRays()
         {
             for (int i = 0; i < currentRayDirections.Count; i++)
             {
-                Debug.DrawRay(ballPosition.position, currentRayDirections[i], Color.red);
-
-                ray.origin = ballPosition.position;
-                ray.direction = currentRayDirections[i];
                 var rayHit = Physics2D.Raycast(ballPosition.position, currentRayDirections[i], ballHalfSize);
 
                 if (rayHit.collider != null)
                 {
                     var collisionObject = rayHit.collider.gameObject;
-                    if (collisionObject.tag == "Paddle")
+                    if (collisionObject.name == "Paddle")
                     {
                         var center = collisionObject.transform.position.x;
                         var distance = rayHit.point.x - center;
@@ -116,10 +116,10 @@ namespace Models
                     else
                     {
                         newDirection = Vector2.Reflect(direction, rayHit.normal);
-                        var randomRange = UnityEngine.Random.Range(-0.25f, 0.25f);
+                        var randomRange = UnityEngine.Random.Range(-0.1f, 0.1f);
                         newDirection.x += randomRange;
                         newDirection.y += randomRange;
-                        if (collisionObject.tag == "Brick")
+                        if (collisionObject.name == "Brick")
                         {
                             onBallHitBrick?.Invoke(collisionObject);
                         }
@@ -133,8 +133,7 @@ namespace Models
 
         private void BallMove(float time)
         {
-            Debug.DrawRay(ballPosition.position, direction.normalized, Color.green, 5f);
-            ballPosition.Translate(direction.normalized * (speed * time), Space.World);
+            ballPosition.Translate(direction.normalized * speed * time, Space.World);
         }
     }
 }

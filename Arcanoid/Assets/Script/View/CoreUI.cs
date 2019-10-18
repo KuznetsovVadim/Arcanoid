@@ -8,10 +8,9 @@ using UnityEngine.UI;
 
 namespace BaseScripts
 {
-    public class CoreUI : MonoBehaviour
+    public class CoreUI: MonoBehaviour
     {
         [SerializeField] Text score;
-        [SerializeField] Text bonus;
         [SerializeField] Text life;
         [SerializeField] Text level;
 
@@ -22,25 +21,34 @@ namespace BaseScripts
         [SerializeField] Text notificationMessage;
 
         GameController gameController;
-        BonusController bonusController;
-        BallController ballController;
 
         GameModel gameModel;
 
-        public void Init(GameController gameController, BonusController bonusController)
+        public void Init(GameController gameController)
         {
             this.gameController = gameController;
             gameModel = gameController.gameModel;
             gameModel.modelHasChanged = RefreshUI;
             Locker.Lock = true;
-            exit.onClick.AddListener(ExitGame);
-            start.onClick.AddListener(StartNewGame);
-            notification.SetActive(false);
+            exit?.onClick.AddListener(ExitGame);
+            start?.onClick.AddListener(StartNewGame);
+            notification?.SetActive(false);
         }
 
-        private void RefreshBonus()
+        public void StartBonusTimer(int seconds, Action onBonusEnd)
         {
+            StartCoroutine(CountDownBonusTimer(seconds, onBonusEnd));
+        }
 
+        private IEnumerator CountDownBonusTimer(int seconds, Action methods)
+        {
+            int counter = seconds;
+            while (counter > 0)
+            {
+                yield return new WaitForSeconds(1);
+                counter--;
+            }
+            methods?.Invoke();
         }
 
         private void RefreshUI()
@@ -54,7 +62,7 @@ namespace BaseScripts
         {
             Locker.Lock = true;
             notification.SetActive(true);
-            StartCoroutine(CountDownNotification(5, Constants.CONTINUE_GAME_MESSAGE, ()=>
+            StartCoroutine(CountDownNotification(Constants.COUNT_DOWN_DURATION, Constants.CONTINUE_GAME_MESSAGE, ()=>
             {
                 notification.SetActive(false);
                 gameController.ContinueLevel();
@@ -67,7 +75,7 @@ namespace BaseScripts
         {
             Locker.Lock = true;
             notification.SetActive(true);
-            StartCoroutine(CountDownNotification(5, Constants.NEW_LEVEL_MESSAGE, () =>
+            StartCoroutine(CountDownNotification(Constants.COUNT_DOWN_DURATION, Constants.NEW_LEVEL_MESSAGE, () =>
             {
                 notification.SetActive(false);
                 gameController.StartNextLevel();
@@ -81,6 +89,7 @@ namespace BaseScripts
             Locker.Lock = true;
             start.gameObject.SetActive(true);
             notification.SetActive(true);
+            exit.gameObject.SetActive(true);
             notificationMessage.text = Constants.GAME_OVER_MESSAGE;
         }
 
@@ -90,7 +99,11 @@ namespace BaseScripts
             start.gameObject.SetActive(false);
             exit.gameObject.SetActive(false);
             notification.SetActive(true);
-            StartCoroutine(CountDownNotification(5, Constants.NEW_GAME_MESSAGE, () =>
+            if (gameController.isNeedControllers)
+            {
+                gameController.GetAllControllers();
+            }
+            StartCoroutine(CountDownNotification(Constants.COUNT_DOWN_DURATION, Constants.NEW_GAME_MESSAGE, () =>
             {
                 notification.SetActive(false);
                 gameController.StartNewGame();
